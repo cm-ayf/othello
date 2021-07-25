@@ -1,0 +1,26 @@
+th,td {
+    border: solid 1px;
+    padding: 0.25rem;
+}
+.t3 {
+    background-color: yellowgreen;
+    
+}
+
+div {
+    border-radius: 2rem;
+    width: 4rem;
+    height: 4rem;
+}
+.d1 {
+    border: solid 1px;
+    background-color: black;
+}
+.d2 {
+    border: solid 1px;
+    background-color: white;
+}
+ 
+table {
+    border-collapse: collapse;
+}

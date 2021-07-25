@@ -1,5 +1,8 @@
 use futures::{SinkExt, StreamExt, channel::mpsc};
-use warp::{Filter, fs, ws};
+use warp::{Filter, fs, ws::*};
+
+mod board;
+use board::Board;
 
 #[tokio::main]
 async fn main() {
@@ -12,18 +15,24 @@ async fn main() {
     let ws 
         = warp::path("ws")
         .and(warp::ws())
-        .map(|ws: ws::Ws| {
+        .map(|ws: Ws| {
             ws.on_upgrade(|websocket| async {
                 let (ws_tx, ws_rx) = websocket.split();
                 let (fc_tx, fc_rx) = mpsc::unbounded();
                 let forward = fc_rx.forward(ws_tx);
-                let ping_pong = ws_rx.for_each(|msg| async {
-                    if msg.unwrap().to_str().unwrap().contains("ping") {
-                        fc_tx.clone().send(Ok(ws::Message::text("pong"))).await.unwrap();
+                let board = Board::new();
+                let handler = ws_rx.for_each(|msg| async {
+                    let str = String::from(msg.unwrap().to_str().unwrap());
+                    if str.contains("ping") {
+                        fc_tx.clone().send(Ok(Message::text("pong"))).await.unwrap();
+                    }
+                    if str.contains("DOMContentLoaded") {
+                        let json = serde_json::to_string(&board).unwrap();
+                        fc_tx.clone().send(Ok(Message::text(json))).await.unwrap();
                     }
                 });
-                futures::pin_mut!(forward, ping_pong);
-                futures::future::select(forward, ping_pong).await;
+                futures::pin_mut!(forward, handler);
+                futures::future::select(forward, handler).await;
                 
             })
         });

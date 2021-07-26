@@ -3,23 +3,31 @@ th,td {
     padding: 0.25rem;
 }
 .t3 {
-    background-color: yellowgreen;
+    background-color: green;
 }
 .t4 {
-    background-color: green;
+    background-color: yellowgreen;
+}
+.t3:hover, .t4:hover {
+    background-color: tomato;
+}
+.new {
+    background-color: yellow;
 }
 
 div {
     border-radius: 2rem;
     width: 4rem;
     height: 4rem;
+    border: solid 1px;
+    border-color: transparent;
 }
 .d1 {
-    border: solid 1px;
+    border-color: black;
     background-color: black;
 }
 .d2 {
-    border: solid 1px;
+    border-color: black;
     background-color: white;
 }
  

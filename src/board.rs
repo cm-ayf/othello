@@ -102,10 +102,10 @@ impl Board {
                 i -= di;
                 j += 1; 
                 j -= dj;
-                self.state[i][j] = self.next;
                 if self.state[i][j] == self.next {
                     return;
                 }
+                self.state[i][j] = self.next;
             }
         });
     }

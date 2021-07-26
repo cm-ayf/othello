@@ -27,7 +27,7 @@ async fn main() {
                     let mut cmd = str.split_whitespace();
                     match cmd.next() {
                         Some("ping") => fc_tx.clone().send(Ok(Message::text("pong"))).await.unwrap(),
-                        Some("DOMContentLoaded") => {
+                        Some("reload") => {
                             let json = serde_json::to_string(&*board).unwrap();
                             fc_tx.clone().send(Ok(Message::text(json))).await.unwrap();
                         },
@@ -53,6 +53,9 @@ async fn main() {
                                 
                             }
                             
+                        }
+                        Some("close") => {
+                            return;
                         }
                         Some(str) => fc_tx.clone().send(Ok(Message::text(format!("invalid command {}", str)))).await.unwrap(),
                         None => fc_tx.clone().send(Ok(Message::text("no command parsed"))).await.unwrap(),

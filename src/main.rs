@@ -4,10 +4,27 @@ use warp::{Filter, fs, ws::*};
 mod board;
 use board::Board;
 
+const DEFAULT_PORT: u16 = 3000;
+
 #[tokio::main]
 async fn main() {
     std::env::set_var("RUST_LOG", "server");
     env_logger::init();
+
+    let mut args = std::env::args();
+    args.next().unwrap();
+    let port = match args.next() {
+        Some(str) => {
+            match str.parse::<u16>() {
+                Ok(u) => u,
+                Err(_) => {
+                    println!("port argument error; using {}", DEFAULT_PORT);
+                    DEFAULT_PORT
+                },
+            }
+        }
+        None => DEFAULT_PORT,
+    };
 
     let file
         = fs::dir("resource");
@@ -66,5 +83,5 @@ async fn main() {
 
             })
         });
-    warp::serve(ws.or(file).with(warp::log("server"))).run(([127, 0, 0, 1], 3000)).await;
+    warp::serve(ws.or(file).with(warp::log("server"))).run(([127, 0, 0, 1], port)).await;
 }

@@ -4,6 +4,7 @@ use serde::{Serialize, Deserialize};
 pub struct Board {
     state: [[usize; 8]; 8],
     next: usize,
+    new: Option<(usize, usize)>
 }
 
 impl Board {
@@ -18,18 +19,17 @@ impl Board {
             [0; 8],
             [0; 8]
         ] as [[usize; 8]; 8];
-        Board { state, next: 1 }
+        Board { state, next: 1, new: None }
     }
 
     pub fn put(&mut self, row_pos: usize, col_pos: usize) -> Result<(),String> {
         if !((0..8).contains(&row_pos) && (0..8).contains(&col_pos)) {
             return Err(String::from("argument(s) out of bound"));
         }
-        if self.check(row_pos, col_pos) > 0 {
-            self.reverse(row_pos, col_pos);
-        } else {
+        if self.check(row_pos, col_pos) == 0 {
             return Err(String::from("no reverses"));
         }
+        self.reverse(row_pos, col_pos);
         self.next = 3 - self.next;
         for i in 0..8 {
             for j in 0..8 {
@@ -75,6 +75,7 @@ impl Board {
 
     fn reverse(&mut self, row_pos: usize, col_pos: usize) {
         self.state[row_pos][col_pos] = self.next;
+        self.new = Some((row_pos, col_pos));
         [(2,1),(2,2),(1,2),(0,2),(0,1),(0,0),(1,0),(2,0)].iter().for_each(|(di, dj)| {
             let mut i = row_pos;
             let mut j = col_pos;
@@ -90,9 +91,21 @@ impl Board {
                     return;
                 }
                 if self.state[i][j] == self.next {
+                    break;
+                }
+            }
+            loop {
+                if i + di < 1 || i + di > 8 || j + dj < 1 || j + dj > 8 {
                     return;
                 }
+                i += 1; 
+                i -= di;
+                j += 1; 
+                j -= dj;
                 self.state[i][j] = self.next;
+                if self.state[i][j] == self.next {
+                    return;
+                }
             }
         });
     }

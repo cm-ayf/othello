@@ -4,15 +4,19 @@ th,td {
 }
 .t3 {
     background-color: green;
+    transition: background-color 200ms;
 }
 .t4 {
     background-color: yellowgreen;
+    transition: background-color 200ms;
 }
 .t3:hover, .t4:hover {
     background-color: tomato;
+    transition: background-color 200ms;
 }
 .new {
     background-color: yellow;
+    transition: background-color 200ms;
 }
 
 div {

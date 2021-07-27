@@ -1,5 +1,5 @@
 use futures::{SinkExt, StreamExt, channel::mpsc, lock::Mutex};
-use warp::{Filter, fs, ws::*};
+use warp::{Error, Filter, fs, ws::*};
 
 mod board;
 use board::Board;
@@ -39,45 +39,8 @@ async fn main() {
                 let forward = fc_rx.forward(ws_tx);
                 let board = Mutex::new(Board::new());
                 let handler = ws_rx.for_each(|msg| async {
-                    let mut board = board.lock().await;
-                    let str = String::from(msg.unwrap().to_str().unwrap());
-                    let mut cmd = str.split_whitespace();
-                    match cmd.next() {
-                        Some("ping") => fc_tx.clone().send(Ok(Message::text("pong"))).await.unwrap(),
-                        Some("reload") => {
-                            let json = serde_json::to_string(&*board).unwrap();
-                            fc_tx.clone().send(Ok(Message::text(json))).await.unwrap();
-                        },
-                        Some("put") => {
-                            let args = cmd.collect::<Vec<_>>();
-                            if args.len() < 2 {
-                                fc_tx.clone().send(Ok(Message::text("put: not enough arguments"))).await.unwrap();
-                            } else {
-                                match (args[0].parse::<usize>(), args[1].parse::<usize>()) {
-                                    (Ok(row_pos), Ok(col_pos)) => {
-                                        match board.put(row_pos, col_pos) {
-                                            Ok(b) => {
-                                                let json = serde_json::to_string(&*board).unwrap();
-                                                fc_tx.clone().send(Ok(Message::text(json))).await.unwrap();
-                                                if b {
-                                                    fc_tx.clone().send(Ok(Message::text("end"))).await.unwrap();
-                                                }
-                                            },
-                                            Err(e) => fc_tx.clone().send(Ok(Message::text(e))).await.unwrap(),
-                                        }
-                                    },
-                                    _ => {
-                                        fc_tx.clone().send(Ok(Message::text("put: invalid argument: must be usize"))).await.unwrap();
-                                    }
-                                }
-                            }
-                        }
-                        Some("close") => {
-                            return;
-                        }
-                        Some(str) => fc_tx.clone().send(Ok(Message::text(format!("invalid command {}", str)))).await.unwrap(),
-                        None => fc_tx.clone().send(Ok(Message::text("no command parsed"))).await.unwrap(),
-                    }
+                    let tx = fc_tx.clone();
+                    handler(msg, &board, tx).await;
                 });
                 futures::pin_mut!(forward, handler);
                 futures::future::select(forward, handler).await;
@@ -85,4 +48,46 @@ async fn main() {
             })
         });
     warp::serve(ws.or(file).with(warp::log("server"))).run(([127, 0, 0, 1], port)).await;
+}
+
+async fn handler(msg: Result<Message, Error>, board: &Mutex<Board>, mut tx: mpsc::UnboundedSender<Result<Message, Error>>) {
+    let mut board = board.lock().await;
+    let str = String::from(msg.unwrap().to_str().unwrap());
+    let mut cmd = str.split_whitespace();
+    match cmd.next() {
+        Some("ping") => tx.send(Ok(Message::text("pong"))).await.unwrap(),
+        Some("reload") => {
+            let json = serde_json::to_string(&*board).unwrap();
+            tx.send(Ok(Message::text(json))).await.unwrap();
+        },
+        Some("put") => {
+            let args = cmd.collect::<Vec<_>>();
+            if args.len() < 2 {
+                tx.send(Ok(Message::text("put: not enough arguments"))).await.unwrap();
+            } else {
+                match (args[0].parse::<usize>(), args[1].parse::<usize>()) {
+                    (Ok(row_pos), Ok(col_pos)) => {
+                        match board.put(row_pos, col_pos) {
+                            Ok(b) => {
+                                let json = serde_json::to_string(&*board).unwrap();
+                                tx.send(Ok(Message::text(json))).await.unwrap();
+                                if b {
+                                    tx.send(Ok(Message::text("end"))).await.unwrap();
+                                }
+                            },
+                            Err(e) => tx.send(Ok(Message::text(e))).await.unwrap(),
+                        }
+                    },
+                    _ => {
+                        tx.send(Ok(Message::text("put: invalid argument: must be usize"))).await.unwrap();
+                    }
+                }
+            }
+        }
+        Some("close") => {
+            return;
+        }
+        Some(str) => tx.send(Ok(Message::text(format!("invalid command {}", str)))).await.unwrap(),
+        None => tx.send(Ok(Message::text("no command parsed"))).await.unwrap(),
+    }
 }

@@ -56,9 +56,12 @@ async fn main() {
                                 match (args[0].parse::<usize>(), args[1].parse::<usize>()) {
                                     (Ok(row_pos), Ok(col_pos)) => {
                                         match board.put(row_pos, col_pos) {
-                                            Ok(_) => {
+                                            Ok(b) => {
                                                 let json = serde_json::to_string(&*board).unwrap();
                                                 fc_tx.clone().send(Ok(Message::text(json))).await.unwrap();
+                                                if b {
+                                                    fc_tx.clone().send(Ok(Message::text("end"))).await.unwrap();
+                                                }
                                             },
                                             Err(e) => fc_tx.clone().send(Ok(Message::text(e))).await.unwrap(),
                                         }
@@ -67,9 +70,7 @@ async fn main() {
                                         fc_tx.clone().send(Ok(Message::text("put: invalid argument: must be usize"))).await.unwrap();
                                     }
                                 }
-                                
                             }
-                            
                         }
                         Some("close") => {
                             return;

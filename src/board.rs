@@ -12,17 +12,19 @@ impl Board {
         let state = [
             [0; 8],
             [0; 8],
-            [0, 0, 0, 0, 3, 0, 0, 0],
-            [0, 0, 0, 1, 2, 3, 0, 0],
-            [0, 0, 3, 2, 1, 0, 0, 0],
-            [0, 0, 0, 3, 0, 0, 0, 0],
+            [0; 8],
+            [0, 0, 0, 1, 2, 0, 0, 0],
+            [0, 0, 0, 2, 1, 0, 0, 0],
+            [0; 8],
             [0; 8],
             [0; 8]
         ] as [[usize; 8]; 8];
-        Board { state, next: 1, new: None }
+        let mut board = Board { state, next: 1, new: None };
+        board.highlight();
+        board
     }
 
-    pub fn put(&mut self, row_pos: usize, col_pos: usize) -> Result<(),String> {
+    pub fn put(&mut self, row_pos: usize, col_pos: usize) -> Result<bool,String> {
         if !((0..8).contains(&row_pos) && (0..8).contains(&col_pos)) {
             return Err(String::from("argument(s) out of bound"));
         }
@@ -30,7 +32,17 @@ impl Board {
             return Err(String::from("no reverses"));
         }
         self.reverse(row_pos, col_pos);
-        self.next = 3 - self.next;
+        for _ in 0..2 {
+            self.next = 3 - self.next;
+            if self.highlight() > 0 {
+                return Ok(false)
+            }
+        }
+        Ok(true)
+    }
+
+    fn highlight(&mut self) -> usize {
+        let mut cnt = 0;
         for i in 0..8 {
             for j in 0..8 {
                 if self.state[i][j] > 2 {
@@ -38,10 +50,11 @@ impl Board {
                 }
                 if self.state[i][j] == 0 && self.check(i, j) > 0 {
                     self.state[i][j] = self.next + 2;
+                    cnt += 1;
                 }
             }
         }
-        Ok(())
+        cnt
     }
 
     fn check(&self, row_pos: usize, col_pos: usize) -> usize {
